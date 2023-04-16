@@ -42,7 +42,7 @@ def closestSongs(request):
     if cred == None:
         firestoreConnection()
     centroid = retrieveCentroid(user_id, mood)
-    if len(songs) <= 5: return (songs.keys(), 200, headers)
+    if len(songs) <= 5: return (jsonify({'songs': songs.keys()}), 200, headers)
     distances = []
     for (name, score) in songs.items():
         calculated_distance = cosineSimilarity(centroid, score)
