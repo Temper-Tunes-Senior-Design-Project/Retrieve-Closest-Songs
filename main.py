@@ -14,7 +14,8 @@ headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET',
         'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '3600'
+        'Access-Control-Max-Age': '3600',
+        'Content-Type': 'application/json'
 }   
 
 #Initialize credentials to database
@@ -36,8 +37,8 @@ def closestSongs(request):
         songs = request_json["songs"]
         mood = request_json["mood"]
     else:
-        return ({"error":"Bad Input, must pass user_id, map of songs and their metadata, \
-                 and mood label"}, 400, headers)
+        return ({"error":"Bad Input, must pass user_id, map of songs and their metadata, and mood label"}, 
+                400, headers)
     if cred == None:
         firestoreConnection()
     centroid = retrieveCentroid(user_id, mood)
