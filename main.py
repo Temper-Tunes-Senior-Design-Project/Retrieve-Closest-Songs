@@ -5,6 +5,7 @@ from numpy.linalg import norm
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from flask import jsonify
 
 #may need to be used if mood_index is passed instead of the mood itself
 moods = ['sad','angry','energetic','excited','happy','content','calm','depressed'] 
@@ -50,7 +51,7 @@ def closestSongs(request):
     print(distances[:5])
     #return the song names of the 5 smallest distances
     closest_songs = [pair[0] for pair in distances[:5]]
-    return (closest_songs, 200, headers)
+    return (jsonify({'songs': closest_songs}), 200, headers)
 
 def cosineSimilarity(arr1, arr2):
     return np.dot(arr1, arr2)/(norm(arr1)*norm(arr2))
