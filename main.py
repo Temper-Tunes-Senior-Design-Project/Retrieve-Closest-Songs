@@ -5,9 +5,10 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from flask import jsonify, Flask
+from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
-
+cors = CORS(app)
 
 #may need to be used if mood_index is passed instead of the mood itself
 moods = ['sad','angry','energetic','excited','happy','content','calm','depressed'] 
@@ -28,6 +29,8 @@ def firestoreConnection():
     firebase_admin.initialize_app(cred)
 
 #Parameters: user, dict of song names and their list of metadata values, the mood for the centroid to retrieve
+@app.route('/closestSongs')
+@cross_origin()
 def closestSongs(request):
     request_json = request.get_json(silent=True)
     user_id = '' 
@@ -49,7 +52,7 @@ def closestSongs(request):
         calculated_distance = cosineSimilarity(centroid, score)
         distances.append((name,calculated_distance))
     #sort the distances by value
-    distances = sorted(distances, key=lambda x: x[1])
+    distances = sorted(distances, key=lambda x: x[1], reverse=True)
     print(distances[:5])
     #return the song names of the 5 smallest distances
     closest_songs = [pair[0] for pair in distances[:5]]

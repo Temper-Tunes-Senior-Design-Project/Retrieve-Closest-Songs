@@ -2,3 +2,4 @@ Flask==2.2.3
 functions-framework==3.3.0
 firebase-admin==6.1.0
 numpy==1.21.2
+Flask-Cors==3.0.10
