@@ -14,7 +14,7 @@ moods = ['sad','angry','energetic','excited','happy','content','calm','depressed
 
 headers = { 
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Methods': 'POST',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '3600',
         'Content-Type': 'application/json'
