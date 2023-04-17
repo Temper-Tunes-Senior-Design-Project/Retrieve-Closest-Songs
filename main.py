@@ -1,11 +1,13 @@
-import functions_framework
 import requests
 import numpy as np
 from numpy.linalg import norm
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-from flask import jsonify
+from flask import jsonify, Flask
+
+app = Flask(__name__)
+
 
 #may need to be used if mood_index is passed instead of the mood itself
 moods = ['sad','angry','energetic','excited','happy','content','calm','depressed'] 
@@ -26,7 +28,6 @@ def firestoreConnection():
     firebase_admin.initialize_app(cred)
 
 #Parameters: user, dict of song names and their list of metadata values, the mood for the centroid to retrieve
-@functions_framework.http
 def closestSongs(request):
     request_json = request.get_json(silent=True)
     user_id = '' 
@@ -69,3 +70,8 @@ def retrieveCentroid(user_id, mood):
     sorted_dict = sorted(centroid_dict.items(), key=lambda x: x[0])
     centroid = [v[1] for v in sorted_dict]
     return centroid
+
+if __name__ == '__main__':
+    app = Flask(__name__)
+    app.route('/closestSongs', methods=['POST'])(lambda request: closestSongs(request))
+    app.run(debug=True)
