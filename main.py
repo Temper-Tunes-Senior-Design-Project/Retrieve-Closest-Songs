@@ -8,18 +8,15 @@ from flask import jsonify, Flask
 from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
-cors = CORS(app)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
-#may need to be used if mood_index is passed instead of the mood itself
-moods = ['sad','angry','energetic','excited','happy','content','calm','depressed'] 
-
-headers = { 
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '3600',
-        'Content-Type': 'application/json'
-}   
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'POST')
+    response.headers.add('Access-Control-Max-Age', '3600')
+    return response
 
 #Initialize credentials to database
 cred = None
@@ -42,11 +39,11 @@ def closestSongs(request):
         mood = request_json["mood"]
     else:
         return ({"error":"Bad Input, must pass user_id, map of songs and their metadata, and mood label"}, 
-                400, headers)
+                400)
     if cred == None:
         firestoreConnection()
     centroid = retrieveCentroid(user_id, mood)
-    if len(songs) <= 5: return (jsonify({'songs': songs.keys()}), 200, headers)
+    if len(songs) <= 5: return (jsonify({'songs': songs.keys()}), 200)
     distances = []
     for (name, score) in songs.items():
         calculated_distance = cosineSimilarity(centroid, score)
@@ -56,7 +53,7 @@ def closestSongs(request):
     print(distances[:5])
     #return the song names of the 5 smallest distances
     closest_songs = [pair[0] for pair in distances[:5]]
-    return (jsonify({'songs': closest_songs}), 200, headers)
+    return (jsonify({'songs': closest_songs}), 200)
 
 def cosineSimilarity(arr1, arr2):
     return np.dot(arr1, arr2)/(norm(arr1)*norm(arr2))
