@@ -43,16 +43,14 @@ def closestSongs(request):
     if cred == None:
         firestoreConnection()
     centroid = retrieveCentroid(user_id, mood)
-    if len(songs) <= 5: return (jsonify({'songs': songs.keys()}), 200)
     distances = []
     for (name, score) in songs.items():
         calculated_distance = cosineSimilarity(centroid, score)
         distances.append((name,calculated_distance))
     #sort the distances by value
     distances = sorted(distances, key=lambda x: x[1], reverse=True)
-    print(distances[:5])
-    #return the song names of the 5 smallest distances
-    closest_songs = [pair[0] for pair in distances[:5]]
+    #return the song names in order of closest to the centroid
+    closest_songs = [pair[0] for pair in distances]
     return (jsonify({'songs': closest_songs}), 200)
 
 def cosineSimilarity(arr1, arr2):
