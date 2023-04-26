@@ -8,7 +8,8 @@ from flask import jsonify, Flask
 from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
-cors = CORS(app, resources={r"/*": {"origins": "*"}})
+# cors = CORS(app, resources={r"/*": {"origins": "*"}})
+cors = CORS(app, origins="*")
 
 @app.after_request
 def add_cors_headers(response):
@@ -38,11 +39,14 @@ def closestSongs(request):
         songs = request_json["songs"]
         mood = request_json["mood"]
     else:
-        return ({"error":"Bad Input, must pass user_id, map of songs and their metadata, and mood label"}, 
+        return (jsonify({"error":"Bad Input, must pass user_id, map of songs and their metadata, and mood label"}), 
                 400)
     if cred == None:
         firestoreConnection()
-    centroid = retrieveCentroid(user_id, mood)
+    res = retrieveCentroid(user_id, mood)
+    if "error" in res:
+        return (jsonify(res["error"],400))
+    centroid = res["centroid"]
     distances = []
     for (name, score) in songs.items():
         calculated_distance = cosineSimilarity(centroid, score)
@@ -65,9 +69,11 @@ def retrieveCentroid(user_id, mood):
     mood_doc_ref = user_doc_ref.collection("centroids").document(mood) 
     # Get the centroid in dict format, and sort the centroid keys
     centroid_dict = mood_doc_ref.get().to_dict()
+    if centroid_dict is None:
+        return {"error": f"no centroid for mood - {mood} - found for user with ID {user_id}"}
     sorted_dict = sorted(centroid_dict.items(), key=lambda x: x[0])
     centroid = [v[1] for v in sorted_dict]
-    return centroid
+    return {"centroid": centroid}
 
 if __name__ == '__main__':
     app = Flask(__name__)
