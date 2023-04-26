@@ -45,7 +45,7 @@ def closestSongs(request):
         firestoreConnection()
     res = retrieveCentroid(user_id, mood)
     if "error" in res:
-        return (jsonify(res,400))
+        return (jsonify(res), 400)
     centroid = res["centroid"]
     distances = []
     for (name, score) in songs.items():
