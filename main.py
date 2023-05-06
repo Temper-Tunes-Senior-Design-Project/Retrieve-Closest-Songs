@@ -6,6 +6,10 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from flask import jsonify, Flask
 from flask_cors import CORS, cross_origin
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import json
+import pandas as pd
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/*": {"origins": "*"}})
@@ -25,6 +29,16 @@ def firestoreConnection():
     global cred
     cred = credentials.Certificate("mood-swing-6c9d0-firebase-adminsdk-9cm02-66f39cc0dd.json")
     firebase_admin.initialize_app(cred)
+
+#Setup Spotify and Firebase Credentials
+sp = None
+def spotify_client():
+    global sp
+    sp_cred = None
+    with open('spotify_credentials.json') as credentials:
+        sp_cred = json.load(credentials)
+    sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(sp_cred["client_id"],sp_cred['client_secret']))
+
 
 #Parameters: user, dict of song names and their list of metadata values, the mood for the centroid to retrieve
 @app.route('/closestSongs')
@@ -47,8 +61,12 @@ def closestSongs(request):
     if "error" in res:
         return (jsonify(res), 400)
     centroid = res["centroid"]
+    song_scores_dict = getSongScores(songs)
+    if song_scores_dict is None: return (jsonify({"error": "could not find spotify features for song ids"}), 400)
+    print(song_scores_dict)
     distances = []
-    for (name, score) in songs.items():
+    
+    for (name, score) in song_scores_dict.items():
         calculated_distance = cosineSimilarity(centroid, score)
         distances.append((name,calculated_distance))
     #sort the distances by value
@@ -74,6 +92,41 @@ def retrieveCentroid(user_id, mood):
     sorted_dict = sorted(centroid_dict.items(), key=lambda x: x[0])
     centroid = [v[1] for v in sorted_dict]
     return {"centroid": centroid}
+
+def getSongScores(songs):
+    global sp
+    if sp == None:
+        spotify_client()
+    print(f"songs: {songs}")
+    track_info = sp.tracks(songs)['tracks']
+    # Remove any elements that are None
+    track_info = [track for track in track_info if track is not None]
+    track_ids = [track["id"] for track in track_info]
+    return retrieveTrackFeatures(track_ids)
+
+def retrieveTrackFeatures(track_ids):
+    dfs = []
+    for i in range(0, len(track_ids), 50):
+        # Retrieve track features with current offset
+        features = sp.audio_features(track_ids[i:i+50])
+        checked_features = [l for l in features if l is not None]
+        if len(checked_features) > 0:
+            # Convert to DataFrame
+            df = pd.DataFrame(checked_features)
+            
+            # Remove columns that we don't need
+            df = df.drop(['type', 'uri', 'analysis_url', 'track_href'], axis=1)
+            
+            # df = df[['id', 'valence', 'energy']]
+            
+            # Append to list of dataframes
+            dfs.append(df)
+    if len(dfs) == 0: return None
+    # Concatenate all dataframes into a single one
+    features_df = pd.concat(dfs, ignore_index=True)
+    features_dict = features_df.set_index('id').T.to_dict('list')
+    return features_dict
+    # return features_df
 
 if __name__ == '__main__':
     app = Flask(__name__)
