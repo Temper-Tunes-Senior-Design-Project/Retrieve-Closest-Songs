@@ -10,6 +10,10 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import json
 import pandas as pd
+import pickle
+from sklearn.discriminant_analysis import StandardScaler
+import scipy.stats as stats
+
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/*": {"origins": "*"}})
@@ -123,10 +127,52 @@ def retrieveTrackFeatures(track_ids):
             dfs.append(df)
     if len(dfs) == 0: return None
     # Concatenate all dataframes into a single one
-    features_df = pd.concat(dfs, ignore_index=True)
-    features_dict = features_df.set_index('id').T.to_dict('list')
-    return features_dict
+    features_df = pd.concat(dfs, ignore_index=True).set_index('id')
+    preprocessed_features_df = clipAndNormalizeMLP(features_df)
+    preprocessed_features_dict = preprocessed_features_df.T.to_dict('list')
+    return preprocessed_features_dict
     # return features_df
+
+def clipAndNormalizeMLP(features):
+    #clip the features to the range of the training data
+    features['danceability'] = features['danceability'].clip(lower=0.25336000000000003, upper=0.9188199999999997)
+    features['energy'] = features['energy'].clip(lower=0.047536, upper=0.982)
+    features['loudness'] = features['loudness'].clip(lower=-24.65708, upper=-0.8038200000000288)
+    features['speechiness'] = features['speechiness'].clip(lower=0.0263, upper=0.5018199999999997)
+    features['acousticness'] = features['acousticness'].clip(lower=1.4072e-04, upper=0.986)
+    features['instrumentalness'] = features['instrumentalness'].clip(lower=0.0, upper=0.951)
+    features['liveness'] = features['liveness'].clip(lower=0.044836, upper=0.7224599999999991)
+    features['valence'] = features['valence'].clip(lower=0.038318, upper=0.9348199999999998)
+    features['tempo'] = features['tempo'].clip(lower=66.34576, upper=189.87784)
+    features['duration_ms'] = features['duration_ms'].clip(lower=86120.0, upper=341848.79999999976)
+    features['time_signature'] = features['time_signature'].clip(lower=3.0, upper=5.0)
+    
+    columns_to_log=['liveness', 'instrumentalness', 'acousticness', 'speechiness','loudness','energy']
+
+    for i in columns_to_log:
+        if i == 'loudness':
+            features[i] = features[i] + 60
+        features[i] = np.log(features[i]+1)
+
+    #normalize the data
+    scaler = pickle.load(open('scaler3.pkl', 'rb'))
+    #fit on all columns except the track id
+    preprocessedFeatures = scaler.transform(features)
+
+    #convert to dictionary, with track id as key
+    preprocessedFeatures = pd.DataFrame(preprocessedFeatures, columns=features.columns)
+
+    
+    #apply z-score normalization
+    for i in columns_to_log:
+        preprocessedFeatures[i] = stats.zscore(preprocessedFeatures[i])
+        preprocessedFeatures.clip(lower=-2.7, upper=2.7, inplace=True)
+
+    preprocessedFeatures['id'] = features.index.to_list()
+    preprocessedFeatures.set_index('id', inplace=True)
+
+#     preprocessedFeatures = preprocessedFeatures.set_index('id').T.to_dict('list')
+    return preprocessedFeatures
 
 if __name__ == '__main__':
     app = Flask(__name__)
