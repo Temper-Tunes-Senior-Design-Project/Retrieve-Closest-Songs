@@ -102,7 +102,9 @@ def getSongScores(songs):
     if sp == None:
         spotify_client()
     print(f"songs: {songs}")
-    track_info = sp.tracks(songs)['tracks']
+    track_info = []
+    for i in range(0, len(songs), 50):
+        track_info.extend(sp.tracks(songs[i:i+50])['tracks'])
     # Remove any elements that are None
     track_info = [track for track in track_info if track is not None]
     track_ids = [track["id"] for track in track_info]
